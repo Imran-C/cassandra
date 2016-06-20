@@ -199,8 +199,6 @@ public class CommitLogReader
 
                     statusTracker.errorContext = String.format("Next section at %d in %s", syncSegment.fileStartPosition, desc.fileName());
 
-                    // TODO: Since EncryptedFileSegmentInputStream doesn't implement seek(), we cannot pre-emptively seek
-                    // to the desired offset in the syncSegment before reading the section and deserializing the mutations.
                     readSection(handler, syncSegment.input, minPosition, syncSegment.endPosition, statusTracker, desc);
                     if (!statusTracker.shouldContinue())
                         break;
@@ -254,6 +252,11 @@ public class CommitLogReader
                              ReadStatusTracker statusTracker,
                              CommitLogDescriptor desc) throws IOException
     {
+        
+        if (desc.id == minPosition.segmentId && reader.getFilePointer() < minPosition.position)
+            //Jump forward only if we are in the correct segment Id and are behind the desired minPos
+            reader.seek(minPosition.position);
+
         while (statusTracker.shouldContinue() && reader.getFilePointer() < end && !reader.isEOF())
         {
             long mutationStart = reader.getFilePointer();
